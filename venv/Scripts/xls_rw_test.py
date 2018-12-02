@@ -1,5 +1,68 @@
 import xlrd
 import xlwt
+from xlutils.copy import copy
+import os
+import re
+
+def test_file(filename=None):
+    if filename is None :
+        print ("Filename is needed .")
+        return False
+    if not os.path.isfile(filename):
+        print ("%s is NOT exist" % filename)
+        return False
+    if not os.access(filename, os.R_OK):
+        print ("%s is NOT accessible to read" % filename)
+        return False
+    if not os.access(filename, os.W_OK):
+        print ("%s is NOT accessible to write" % filename)
+        return False
+    return True
+
+def qty_split(main_file=None, src_file=None):
+    if not test_file(main_file):
+        return -1
+    if not test_file(src_file):
+        return -1
+    sheet_list = ('文化视窗','互动课堂','录播','物联','安全校园')
+
+    src_book = xlrd.open_workbook(src_file)
+    main_book = xlrd.open_workbook(main_file)
+
+    main_book_wt = copy(main_book) 			# 复制页面
+    # main_book_sheet = main_book_wt.get_sheet(0) 	# 取第一个sheet
+    print(main_book.sheet_names())
+    for _ in main_book.sheet_names():
+        i =0
+        while (i<5):
+            sheet_name = r'\w*'+sheet_list[i]+r'\w*'
+            if re.match(sheet_name, _):
+                print ("%s is found in sheet_list[%d]"%(_, i))
+            # print ("%d, %s " % (i,  sheet_name))
+            i+=1
+        """
+        if (re.match('\w*'+sheet_list[0]+'\w*',_)):
+            print ("sheet_list[0] %s <----> %s"% sheet_list[0], _)
+        elif (re.match(sheet_list[1],_)):
+            print ("sheet_list[1] %s <----> %s"% sheet_list[1], _)
+        elif (re.match(sheet_list[2], _)):
+            print ("sheet_list[2] %s <----> %s"% sheet_list[2], _)
+        elif (re.match(sheet_list[3],_)):
+            print ("sheet_list[3] %s <----> %s"% sheet_list[3], _)
+        elif (re.match(sheet_list[4], _)):
+            print("sheet_list[4] %s <----> %s" % sheet_list[4], _)
+        else:
+            print ("%s dose not match any str" % _)
+        """
+#main_book_sheet =
+"""
+    for i in range(96):
+        ws.write(1, 5 + i, vector[i])
+    # ----- 按(row, col, str)写入需要写的内容 -------
+    main_book_wt.save(main_file) 		# 保存文件
+"""
+
+
 
 
 def xls_rw():
