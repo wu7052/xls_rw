@@ -40,7 +40,7 @@ def qty_split(main_file=None, src_file=None):
     src_sheet_list = src_book.sheet_names()
     main_sheet_list = main_book.sheet_names()
 
-    sheet_map: Dict[ Union[int, Any], List[Any] ] = {}
+    sheet_map: Dict[Union[int, Any], List[Any]] = {}
     i = 0
 
     while len(sheet_list) > 0:
@@ -75,7 +75,6 @@ def qty_split(main_file=None, src_file=None):
 
 def sheet_process(sheet_map=None, main_book_rd=None,
                   main_book_wt=None, src_book_rd=None, main_file=None):
-
     if sheet_map is None:
         print("[sheet_proces] need a sheet map \n")
         return -1
@@ -95,7 +94,7 @@ def sheet_process(sheet_map=None, main_book_rd=None,
     src_map = {}
 
     # 目标表单 写入操作 句柄
-    m_sheet_wt = main_book_wt.get_sheet(sheet_map[0][0])
+    m_sheet_wt: object = main_book_wt.get_sheet(sheet_map[0][0])
 
     # 目标表单 读取操作 句柄
     m_sheet_rd = main_book_rd.sheet_by_name(sheet_map[0][0])
@@ -105,22 +104,52 @@ def sheet_process(sheet_map=None, main_book_rd=None,
     # 在目标表单 写入学校名，并记录 列号
     m_sheet_wt.write(0, m_sheet_rd.ncols, src_book_rd.sheet_names()[0])
     sheet_map[0].append(m_sheet_rd.ncols)
-    print (sheet_map)
+    print(sheet_map)
 
     # 源表单 读取操作句柄
     src_sheet_rd = src_book_rd.sheet_by_name(sheet_map[0][1])
     src_map = src_map_gather(src_sheet_rd)
+    main_file_update(src_map, m_sheet_rd, m_sheet_wt)
 
     main_book_wt.save(main_file)
 
 
+def main_file_update(src_map, m_sheet_rd, m_sheet_wt):
+    try:
+        assert src_map is not None
+        assert m_sheet_rd is not None
+        assert m_sheet_wt is not None
+    except Exception as e:
+        print ("[main_file_update] argu is not correct, EXIT \n")
+
+    cur_row, content_flag, dev_name_index = 0, 0, 0
+    while cur_row < m_sheet_rd.nrows:
+        row_content = m_sheet_rd.row_values(cur_row)
+        index = 0
+
+        # 处理首行的表头，确定“设备名称” 的列号
+        if content_flag == 0:
+            while index < len(row_content):
+                if re.match(r'.*名称.*', row_content[index]):
+                    dev_name_index = index
+                    content_flag = 1
+                elif re.match(r'.*设备类型.*', row_content[index]):
+                    dev_name_index = index
+                    content_flag = 1
+                index += 1
+        else:
+            pass
+
+
+
+
 def src_map_gather(src_sheet_rd=None):
     if src_sheet_rd is None:
-        print ("[src_map_gather] source sheet read is None , return]")
+        print("[src_map_gather] source sheet read is None , return]")
         raise excepiton
-    cur_row , content_flag= 0 ,0
-    target_column_index = {'序号':0, '设备':0, '数量':0}
-    target_map={}
+    cur_row, content_flag = 0, 0
+    target_column_index = {'序号': 0, '设备': 0, '数量': 0}
+    target_map = {}
     target_map_index = 0
     while cur_row < src_sheet_rd.nrows:
         row_content = src_sheet_rd.row_values(cur_row)
@@ -129,16 +158,16 @@ def src_map_gather(src_sheet_rd=None):
         # 确定目标列的序号
         if content_flag == 0:
             while index < len(row_content):
-                if re.match((r'.*序号.*'),row_content[index]):
+                if re.match(r'.*序号.*', row_content[index]):
                     target_column_index['序号'] = index
                     content_flag = 1
-                elif re.match((r'.*设备.*'), row_content[index]):
+                elif re.match(r'.*设备.*', row_content[index]):
                     target_column_index['设备'] = index
                     content_flag = 1
-                elif re.match((r'.*名称.*'), row_content[index]):
+                elif re.match(r'.*名称.*', row_content[index]):
                     target_column_index['设备'] = index
                     content_flag = 1
-                elif re.match((r'.*数量.*'), row_content[index]):
+                elif re.match(r'.*数量.*', row_content[index]):
                     target_column_index['数量'] = index
                     content_flag = 1
                 index += 1
@@ -152,15 +181,18 @@ def src_map_gather(src_sheet_rd=None):
                 content_flag =1
             """
         # 已确定目标列，开始逐行读取目标列 写入 map 字典
-        else :
-            #print ("[Target Column] {}".format(target_column_index))
-            target_map[target_map_index]=[row_content[target_column_index['序号']],row_content[target_column_index['设备']],
-                                                                  row_content[target_column_index['数量']]]
+        else:
+            # print ("[Target Column] {}".format(target_column_index))
+            target_map[target_map_index] = [row_content[target_column_index['序号']],
+                                            row_content[target_column_index['设备']],
+                                            row_content[target_column_index['数量']]]
             target_map_index += 1
         cur_row += 1
 
     # print (target_map)
     return target_map
+
+
 """
     for i in range(96):
         ws.write(1, 5 + i, vector[i])
