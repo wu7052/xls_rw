@@ -23,6 +23,10 @@ def test_file(filename=None):
     return True
 
 
+sheet_map: Dict[Union[int, Any], List[Any]] = {}
+src_map = {}
+
+
 def qty_split(main_file=None, src_file=None):
     if not test_file(main_file):
         return -1
@@ -40,7 +44,6 @@ def qty_split(main_file=None, src_file=None):
     src_sheet_list = src_book.sheet_names()
     main_sheet_list = main_book.sheet_names()
 
-    sheet_map: Dict[Union[int, Any], List[Any]] = {}
     i = 0
 
     while len(sheet_list) > 0:
@@ -69,11 +72,11 @@ def qty_split(main_file=None, src_file=None):
         i += 1
 
     print(sheet_map)
-    sheet_process(sheet_map, main_book,
+    sheet_process(main_book,
                   main_book_wt, src_book, main_file)
 
 
-def sheet_process(sheet_map=None, main_book_rd=None,
+def sheet_process(main_book_rd=None,
                   main_book_wt=None, src_book_rd=None, main_file=None):
     if sheet_map is None:
         print("[sheet_proces] need a sheet map \n")
@@ -91,12 +94,12 @@ def sheet_process(sheet_map=None, main_book_rd=None,
         print("[sheet_proces] need a source sheet handle \n")
         return -1
 
-    src_map = {}
-
-    # 目标表单 写入操作 句柄
+    # 从此处开始循环，次数 = sheet_map key 数量
+    print ("进入循环次数{}".format(len(sheet_map)))
+    # 目标表单 获得 写入操作 句柄
     m_sheet_wt: object = main_book_wt.get_sheet(sheet_map[0][0])
 
-    # 目标表单 读取操作 句柄
+    # 目标表单 获得 读取操作 句柄
     m_sheet_rd = main_book_rd.sheet_by_name(sheet_map[0][0])
     # print("sheet name:{name}--- ncolumn:{col} --- nrow:{row}".
     #     format(name=src_book_rd.sheet_names()[0], row=m_sheet_rd.nrows, col=m_sheet_rd.ncols))
@@ -109,18 +112,30 @@ def sheet_process(sheet_map=None, main_book_rd=None,
     # 源表单 读取操作句柄
     src_sheet_rd = src_book_rd.sheet_by_name(sheet_map[0][1])
     src_map = src_map_gather(src_sheet_rd)
-    main_file_update(src_map, m_sheet_rd, m_sheet_wt)
+    main_file_update(m_sheet_rd.ncols, m_sheet_rd, m_sheet_wt)
+    # 到此处循环结束
 
     main_book_wt.save(main_file)
 
 
-def main_file_update(src_map, m_sheet_rd, m_sheet_wt):
+def src_find_qty(src_map, dev_name):
+    try:
+        assert src_map is not None
+        assert dev_name is not None
+    except Exception as e:
+        print("[src_find_qty] argu is not correct, EXIT \n")
+        return -1
+
+    return 1234
+
+
+def main_file_update(target_col, m_sheet_rd, m_sheet_wt):
     try:
         assert src_map is not None
         assert m_sheet_rd is not None
         assert m_sheet_wt is not None
     except Exception as e:
-        print ("[main_file_update] argu is not correct, EXIT \n")
+        print("[main_file_update] argu is not correct, EXIT \n")
 
     cur_row, content_flag, dev_name_index = 0, 0, 0
     while cur_row < m_sheet_rd.nrows:
@@ -137,10 +152,16 @@ def main_file_update(src_map, m_sheet_rd, m_sheet_wt):
                     dev_name_index = index
                     content_flag = 1
                 index += 1
-        else:
-            pass
-
-
+        elif row_content[dev_name_index] is not None:
+            print(row_content[dev_name_index])
+            qty = src_find_qty(src_map, row_content[dev_name_index])
+            if qty == -1:
+                pass
+            else:
+                # 当前行、
+                m_sheet_wt.write(cur_row, target_col, qty)
+        # while 循环中，移动到下一行
+        cur_row += 1
 
 
 def src_map_gather(src_sheet_rd=None):
