@@ -24,7 +24,6 @@ def test_file(filename=None):
 
 
 sheet_map: Dict[Union[int, Any], List[Any]] = {}
-src_map = {}
 
 
 def qty_split(main_file=None, src_file=None):
@@ -95,7 +94,7 @@ def sheet_process(main_book_rd=None,
         return -1
 
     # 从此处开始循环，次数 = sheet_map key 数量
-    print ("进入循环次数{}".format(len(sheet_map)))
+    print("进入循环次数{}".format(len(sheet_map)))
     # 目标表单 获得 写入操作 句柄
     m_sheet_wt: object = main_book_wt.get_sheet(sheet_map[0][0])
 
@@ -111,8 +110,14 @@ def sheet_process(main_book_rd=None,
 
     # 源表单 读取操作句柄
     src_sheet_rd = src_book_rd.sheet_by_name(sheet_map[0][1])
+
+    """
+               src_map[int] = [ ['序号','设备''数量'], 
+                                ['序号','设备''数量'],
+                                [ ... ] ]
+    """
     src_map = src_map_gather(src_sheet_rd)
-    main_file_update(m_sheet_rd.ncols, m_sheet_rd, m_sheet_wt)
+    main_file_update(src_map, m_sheet_rd.ncols, m_sheet_rd, m_sheet_wt)
     # 到此处循环结束
 
     main_book_wt.save(main_file)
@@ -126,10 +131,21 @@ def src_find_qty(src_map, dev_name):
         print("[src_find_qty] argu is not correct, EXIT \n")
         return -1
 
-    return 1234
+    print ("Trying to find {}\n".format(dev_name))
+    for _ in src_map.keys():
+        print('matching {}\t'.format(src_map[_][1]))
+        if src_map[_][1].find(dev_name) != -1 or  dev_name.find(src_map[_][1]) != -1:
+            if re.match(r'^[0-9]+$', src_map[_][2]):
+                qty = src_map[_][2]
+                src_map.pop(_)
+                print ("Found {0}, QTY {1}".format(dev_name,qty))
+                return qty
+        # else:
+            # print ("Not found!")
+    return -1
 
 
-def main_file_update(target_col, m_sheet_rd, m_sheet_wt):
+def main_file_update(src_map, target_col, m_sheet_rd, m_sheet_wt):
     try:
         assert src_map is not None
         assert m_sheet_rd is not None
@@ -155,12 +171,12 @@ def main_file_update(target_col, m_sheet_rd, m_sheet_wt):
         elif row_content[dev_name_index] is not None:
             print(row_content[dev_name_index])
             qty = src_find_qty(src_map, row_content[dev_name_index])
-            if qty == -1:
-                pass
+            if qty == -1:  # 定位失败，设备数量返回 -1
+                print("{} Can NOT Found in source file".format(row_content[dev_name_index]))
             else:
                 # 当前行、
                 m_sheet_wt.write(cur_row, target_col, qty)
-        # while 循环中，移动到下一行
+        # while 循环中，移动到main file的下一行
         cur_row += 1
 
 
