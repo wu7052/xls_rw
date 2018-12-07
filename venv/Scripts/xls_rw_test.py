@@ -70,7 +70,7 @@ def qty_split(main_file=None, src_file=None):
         sheet_list.pop(0)
         i += 1
 
-    print(sheet_map)
+    # print(sheet_map)
     sheet_process(main_book,
                   main_book_wt, src_book, main_file)
 
@@ -95,29 +95,33 @@ def sheet_process(main_book_rd=None,
 
     # 从此处开始循环，次数 = sheet_map key 数量
     print("进入循环次数{}".format(len(sheet_map)))
-    # 目标表单 获得 写入操作 句柄
-    m_sheet_wt: object = main_book_wt.get_sheet(sheet_map[0][0])
 
-    # 目标表单 获得 读取操作 句柄
-    m_sheet_rd = main_book_rd.sheet_by_name(sheet_map[0][0])
-    # print("sheet name:{name}--- ncolumn:{col} --- nrow:{row}".
-    #     format(name=src_book_rd.sheet_names()[0], row=m_sheet_rd.nrows, col=m_sheet_rd.ncols))
+    i = 0
+    while i < len(sheet_map):
+        # 目标表单 获得 写入操作 句柄
+        m_sheet_wt: object = main_book_wt.get_sheet(sheet_map[i][0])
 
-    # 在目标表单 写入学校名，并记录 列号
-    m_sheet_wt.write(0, m_sheet_rd.ncols, src_book_rd.sheet_names()[0])
-    sheet_map[0].append(m_sheet_rd.ncols)
-    print(sheet_map)
+        # 目标表单 获得 读取操作 句柄
+        m_sheet_rd = main_book_rd.sheet_by_name(sheet_map[i][0])
+        # print("sheet name:{name}--- ncolumn:{col} --- nrow:{row}".
+        #     format(name=src_book_rd.sheet_names()[0], row=m_sheet_rd.nrows, col=m_sheet_rd.ncols))
 
-    # 源表单 读取操作句柄
-    src_sheet_rd = src_book_rd.sheet_by_name(sheet_map[0][1])
+        # 在目标表单 写入学校名，并记录 列号
+        m_sheet_wt.write(0, m_sheet_rd.ncols, src_book_rd.sheet_names()[0])
+        sheet_map[i].append(m_sheet_rd.ncols)
+        print(sheet_map)
 
-    """
-               src_map[int] = [ ['序号','设备''数量'], 
-                                ['序号','设备''数量'],
-                                [ ... ] ]
-    """
-    src_map = src_map_gather(src_sheet_rd)
-    main_file_update(src_map, m_sheet_rd.ncols, m_sheet_rd, m_sheet_wt)
+        # 源表单 读取操作句柄
+        src_sheet_rd = src_book_rd.sheet_by_name(sheet_map[i][1])
+
+        """
+                   src_map[int] = [ ['序号','设备''数量'], 
+                                    ['序号','设备''数量'],
+                                    [ ... ] ]
+        """
+        src_map = src_map_gather(src_sheet_rd)
+        main_file_update(src_map, m_sheet_rd.ncols, m_sheet_rd, m_sheet_wt)
+        i += 1
     # 到此处循环结束
 
     main_book_wt.save(main_file)
@@ -131,17 +135,15 @@ def src_find_qty(src_map, dev_name):
         print("[src_find_qty] argu is not correct, EXIT \n")
         return -1
 
-    print ("Trying to find {}\n".format(dev_name))
+    print ("Trying to find {}...".format(dev_name), end=' ')
     for _ in src_map.keys():
-        print('matching {}\t'.format(src_map[_][1]))
+        #print('matching {}\t'.format(src_map[_][1]))
         if src_map[_][1].find(dev_name) != -1 or  dev_name.find(src_map[_][1]) != -1:
-            if re.match(r'^[0-9]+$', src_map[_][2]):
+            if not isinstance(src_map[_][2], str):
                 qty = src_map[_][2]
                 src_map.pop(_)
-                print ("Found {0}, QTY {1}".format(dev_name,qty))
+                print ("找到 {0}, 数量 {1}".format(dev_name,qty))
                 return qty
-        # else:
-            # print ("Not found!")
     return -1
 
 
@@ -169,10 +171,10 @@ def main_file_update(src_map, target_col, m_sheet_rd, m_sheet_wt):
                     content_flag = 1
                 index += 1
         elif row_content[dev_name_index] is not None:
-            print(row_content[dev_name_index])
+            print('\n当前第 %d 行：" %s"'%(cur_row, row_content[dev_name_index]))
             qty = src_find_qty(src_map, row_content[dev_name_index])
             if qty == -1:  # 定位失败，设备数量返回 -1
-                print("{} Can NOT Found in source file".format(row_content[dev_name_index]))
+                print("没找到")
             else:
                 # 当前行、
                 m_sheet_wt.write(cur_row, target_col, qty)
